@@ -11,10 +11,11 @@ You are Antigravity, the AI engine of ContentFlow AI.
 Your task is to generate structured, platform-optimized content for students and early professionals in India.
 
 Strict Rules:
-- Return ONLY valid JSON.
-- No markdown.
-- No explanations outside JSON.
-- Follow schema exactly.
+- IMPORTANT: Your response must start with { and end with }. No other text before or after.
+- Return ONLY a single valid JSON object. Nothing else.
+- No markdown code fences (no \`\`\`json).
+- No explanations, preambles, or summaries outside the JSON.
+- Follow the output schema exactly.
 
 INPUT:
 Topic: ${topic}
@@ -40,18 +41,19 @@ Create an outline with:
 
 LinkedIn:
 - Professional tone
-- Max 1300 characters
+- Max 1000 characters
 - 3-5 hashtags
 
 Instagram:
 - Conversational tone
-- 5-10 hashtags
+- Max 300 characters
+- 3-5 hashtags
 - Engaging style
 
 Blog:
-- 800-1200 words
+- 400-600 words
 - SEO structure
-- Meta description
+- Meta description (max 160 characters)
 
 4) Provide quality scores:
 - clarity (1-100)
@@ -105,9 +107,9 @@ OUTPUT JSON FORMAT:
 };
 
 // Models to try in order if one hits quota limits
+// Only models confirmed available via ListModels for this API key
 const MODEL_FALLBACKS = [
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
+  'gemini-2.5-flash',
 ];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -151,13 +153,39 @@ router.post('/generate', async (req, res) => {
         console.log(`Trying model: ${modelName} (attempt ${attempt + 1})`);
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.8, topP: 0.95, maxOutputTokens: 8192 },
+          generationConfig: {
+            temperature: 0.5,
+            topP: 0.95,
+            maxOutputTokens: 16384,
+            responseMimeType: 'application/json',
+          },
         });
 
         const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-        const parsed = JSON.parse(cleaned);
+        const response = await result.response;
+        const text = response.text();
+
+        // Robustly extract the first valid JSON object from the response.
+        // gemini-2.5-flash sometimes adds thinking text or preambles around the JSON.
+        let parsed;
+        try {
+          // First attempt: strip markdown fences and try direct parse
+          const stripped = text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+          parsed = JSON.parse(stripped);
+        } catch {
+          // Second attempt: find the first {...} block using regex
+          const match = text.match(/\{[\s\S]*\}/);
+          if (!match) {
+            console.error(`No JSON object found in response from ${modelName}. Raw text:`, text.substring(0, 500));
+            throw new SyntaxError('No JSON object found in AI response');
+          }
+          try {
+            parsed = JSON.parse(match[0]);
+          } catch (innerErr) {
+            console.error(`JSON parse failed for ${modelName}. Raw text:`, text.substring(0, 500));
+            throw new SyntaxError(`Failed to parse JSON from AI response: ${innerErr.message}`);
+          }
+        }
 
         if (parsed.platform_content) {
           parsed.platform_content = parsed.platform_content.filter((pc) =>
@@ -171,8 +199,11 @@ router.post('/generate', async (req, res) => {
       } catch (err) {
         lastError = err;
         const msg = err.message || '';
+        const status = err.status || 500;
 
-        if (msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('exhausted')) {
+        console.error(`Gemini API Error with ${modelName} (Status ${status}):`, msg);
+
+        if (status === 429 || msg.includes('Too Many Requests') || msg.includes('exhausted')) {
           if (attempt < MAX_RETRIES) {
             const delay = getRetryDelay(msg);
             console.warn(`Rate limited on ${modelName}. Retrying in ${delay / 1000}s...`);
@@ -184,6 +215,11 @@ router.post('/generate', async (req, res) => {
           }
         }
 
+        if (status === 404 || msg.includes('not found')) {
+          console.warn(`Model ${modelName} not found or not available for this API key. Trying next...`);
+          break;
+        }
+
         if (msg.includes('prompt is too long')) {
           return res.status(400).json({ error: 'The provided topic or input is too large. Please reduce the length of your text.' });
         }
@@ -192,18 +228,18 @@ router.post('/generate', async (req, res) => {
           return res.status(500).json({ error: 'Failed to parse AI response as JSON. Please retry.' });
         }
 
-        // For other errors, log and try next model
-        console.error(`Gemini API Error with ${modelName}:`, err);
+        // For other errors, try next model
         break;
       }
     }
   }
 
-  console.error('All models quota-exhausted or API key expired. Returning exact error to user.');
+  console.error('All models failed or quota-exhausted. Returning best error to user.');
 
-  // Don't use mock data, return the real Google Generative AI Error so the user knows it's an actual API limit
-  return res.status(429).json({
-    error: `Google Generative AI Error: Your API Key hit the daily free-tier quota limits (429 Too Many Requests). Details: ${lastError?.message || 'Quota Exhausted'}. Please provide a new API key in server/.env or wait for the quota to reset.`
+  const finalStatus = lastError?.status || 429;
+  return res.status(finalStatus).json({
+    error: `Gemini AI Error: ${lastError?.message || 'The AI service is currently unavailable.'}`,
+    details: 'This usually happens due to quota limits or temporary API issues. Please check your API key in server/.env or try again later.'
   });
 });
 
