@@ -68,16 +68,7 @@ export default function LandingPage({ onGetStarted }: Props) {
                         ContentFlow <span style={{ color: '#6366f1' }}>AI</span>
                     </span>
                 </div>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <span style={{ color: '#94a3b8', fontSize: 14 }}>For Bharat 🇮🇳</span>
-                    <button
-                        className="btn-primary"
-                        style={{ padding: '10px 22px', fontSize: 14 }}
-                        onClick={onGetStarted}
-                    >
-                        Get Started Free
-                    </button>
-                </div>
+
             </nav>
 
             {/* Hero */}
