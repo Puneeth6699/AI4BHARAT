@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { GenerateRequest, GeneratedContent } from '../types';
 
 const api = axios.create({
-    baseURL: '/api',
+    baseURL: 'https://contentflow-backend.onrender.com',
     timeout: 180000,
     headers: {
         'Content-Type': 'application/json',
