@@ -1,8 +1,31 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Linkedin, Instagram,  Twitter,  Youtube
-} from 'lucide-react';
+  Linkedin,
+  Instagram,
+  Copy,
+  Check,
+  Clock,
+  TrendingUp,
+  Hash,
+  ArrowLeft,
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
+  Star,
+  Activity,
+  Zap,
+  BookOpen,
+  Twitter,
+  Play,
+  Layout,
+  MapPin,
+  Lightbulb,
+  Target,
+  BarChart2,
+  Wand2,
+  Youtube
+} from "lucide-react";
 import type { GeneratedContent, PlatformContent, PerformanceSimulation } from '../types';
 import QualityScorePanel from './QualityScorePanel';
 
