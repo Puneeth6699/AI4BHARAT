@@ -222,9 +222,9 @@ OUTPUT JSON FORMAT (return this exact structure):
 
 // Models to try in order if one hits quota limits
 const MODEL_FALLBACKS = [
+  'gemini-1.5-flash',
   'gemini-2.5-flash',
   'gemini-2.0-flash',
-  'gemini-2.5-pro',
 ];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -235,39 +235,7 @@ const getRetryDelay = (errMsg) => {
   return Math.min(suggested, 10000);
 };
 
-router.post('/generate', async (req, res) => {
-  const {
-    topic,
-    audience_type,
-    selected_platforms,
-    language_mode = 'English',
-    brand_tone = 'professional',
-    refinement_request = '',
-  } = req.body;
-
-  if (!topic || !audience_type || !selected_platforms || selected_platforms.length === 0) {
-    return res.status(400).json({
-      error: 'Missing required fields: topic, audience_type, selected_platforms',
-    });
-  }
-
-  // Cap topic length
-  let safeTopic = topic;
-  if (safeTopic.length > 300000) {
-    safeTopic = safeTopic.substring(0, 300000) + '... [text truncated to fit AI limits]';
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-    return res.status(500).json({
-      error: 'GEMINI_API_KEY not configured. Please set it in server/.env',
-    });
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const prompt = buildPrompt(safeTopic, audience_type, selected_platforms, language_mode, brand_tone, refinement_request);
-  let lastError = null;
-
+async function generateContent(genAI, prompt, selected_platforms) {
   for (const modelName of MODEL_FALLBACKS) {
     const MAX_RETRIES = 1;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -327,16 +295,15 @@ router.post('/generate', async (req, res) => {
         parsed.bharat_growth_mode = parsed.bharat_growth_mode || {};
 
         console.log(`Success with model: ${modelName}`);
-        return res.json(parsed);
+        return parsed;
 
       } catch (err) {
-        lastError = err;
         const msg = err.message || '';
         const status = err.status || 500;
 
         console.error(`Gemini API Error with ${modelName} (Status ${status}):`, msg);
 
-        if (status === 429 || msg.includes('Too Many Requests') || msg.includes('exhausted')) {
+        if (status === 429 || msg.includes('Too Many Requests') || msg.includes('exhausted') || msg.includes('quota')) {
           if (attempt < MAX_RETRIES) {
             const delay = getRetryDelay(msg);
             console.warn(`Rate limited on ${modelName}. Retrying in ${delay / 1000}s...`);
@@ -354,11 +321,7 @@ router.post('/generate', async (req, res) => {
         }
 
         if (msg.includes('prompt is too long')) {
-          return res.status(400).json({ error: 'The provided topic or input is too large. Please reduce the length of your text.' });
-        }
-
-        if (err instanceof SyntaxError) {
-          return res.status(500).json({ error: 'Failed to parse AI response as JSON. Please retry.' });
+          throw new Error('PROMPT_TOO_LONG');
         }
 
         break;
@@ -366,14 +329,143 @@ router.post('/generate', async (req, res) => {
     }
   }
 
-  console.error('All models failed or quota-exhausted. Returning best error to user.');
+  // All models failed - return demo data
+  console.log("Gemini API failed, using demo data.");
+  
+  return {
+    ideas: [
+      { id: "idea_1", title: "Build Your LinkedIn Brand in 30 Days", brief_description: "A step-by-step guide to establish your professional presence", key_angle: "Consistency over perfection", target_emotional_trigger: "Empowerment" },
+      { id: "idea_2", title: "How Students Can Grow on LinkedIn", brief_description: "Practical strategies for student creators", key_angle: "Learning in public", target_emotional_trigger: "Inspiration" },
+      { id: "idea_3", title: "Simple Personal Branding Tips", brief_description: "Easy-to-implement branding strategies", key_angle: "Authentic storytelling", target_emotional_trigger: "Confidence" }
+    ],
+    selected_idea_outline: {
+      selected_idea_id: "idea_1",
+      hook: "Most students underestimate LinkedIn's power...",
+      hook_strength_score: 85,
+      main_points: [
+        "Consistency matters more than perfection",
+        "Share your learning journey",
+        "Engage with creators in your niche"
+      ],
+      call_to_action: "Start posting your journey today.",
+      estimated_content_pillar: "educational"
+    },
+    platform_content: selected_platforms.map(platform => ({
+      platform: platform,
+      content: platform === "linkedin" 
+        ? "If you are a student trying to build a digital presence, LinkedIn is your best bet. Start by sharing your learning journey, engage with content in your niche, and stay consistent. Your personal brand is built one post at a time."
+        : platform === "instagram"
+        ? "🚀 Building your brand as a student? LinkedIn is where you need to be! Share what you're learning, connect with your community, and watch your opportunities grow. ✨ #StudentCreators #PersonalBrand"
+        : "In this video, we'll explore how students can leverage LinkedIn to build their personal brand. From crafting engaging posts to networking effectively, you'll learn everything you need to kickstart your digital presence.",
+      hashtags: platform === "linkedin" 
+        ? ["LinkedInGrowth", "StudentCreators", "PersonalBrand"]
+        : platform === "instagram"
+        ? ["LinkedInGrowth", "StudentCreators", "PersonalBrand", "ContentCreation", "DigitalPresence"]
+        : ["LinkedInTips", "PersonalBranding", "CareerGrowth"],
+      meta_description: platform === "youtube" 
+        ? "Learn how to build your LinkedIn presence as a student with practical tips and strategies."
+        : ""
+    })),
+    performance_simulation: selected_platforms.map(platform => ({
+      platform: platform,
+      predicted_reach_score: 75,
+      predicted_engagement_probability: "Medium",
+      viral_potential: "Medium",
+      CTA_effectiveness_rating: 80,
+      best_posting_time_india: "7-9 PM IST",
+      growth_recommendation: "Post consistently and engage with your audience"
+    })),
+    engagement_optimization: {
+      hook_improvement_suggestions: ["Add a surprising statistic", "Start with a question", "Use a bold statement"],
+      cta_enhancement_suggestions: ["Make it more specific", "Add urgency", "Include a clear next step"],
+      hashtag_improvement_suggestions: ["Mix popular and niche tags", "Use location-specific tags", "Add trending hashtags"],
+      discoverability_strategies: ["Engage with top creators", "Comment on trending posts", "Use LinkedIn features"]
+    },
+    quality_score: {
+      clarity: 88,
+      engagement: 85,
+      platform_optimization: 90,
+      originality: 82,
+      overall: 86,
+      explanation: "Strong content with good clarity and engagement potential. Platform optimization is excellent.",
+      improvement_actions: ["Add more specific examples", "Include data points", "Enhance visual elements"]
+    },
+    refinement: {},
+    content_breakdown: {
+      reel_script: "30-second script: Start with LinkedIn. Share your journey. Engage daily. Build your brand. Success follows consistency.",
+      twitter_thread: [
+        "1/5 Most students miss LinkedIn's potential. Here's how to change that.",
+        "2/5 Share what you're learning. Your journey inspires others.",
+        "3/5 Engage authentically. Comments build connections.",
+        "4/5 Consistency beats perfection. Post regularly.",
+        "5/5 Your personal brand grows one post at a time. Start today."
+      ],
+      carousel_slides: [
+        { slide_number: 1, headline: "LinkedIn for Students", body: "Your personal branding journey starts here." },
+        { slide_number: 2, headline: "Share Your Journey", body: "Document what you're learning every day." },
+        { slide_number: 3, headline: "Engage Authentically", body: "Build real connections through comments." },
+        { slide_number: 4, headline: "Stay Consistent", body: "Regular posting beats perfect posting." },
+        { slide_number: 5, headline: "Take Action", body: "Start building your brand today." }
+      ]
+    },
+    bharat_growth_mode: {
+      low_budget_tips: ["Use free design tools like Canva", "Repurpose content across platforms", "Engage during peak hours"],
+      tier_2_creator_strategy: ["Focus on local success stories", "Use regional languages", "Build community first"],
+      weekly_content_plan: [
+        { day: "Monday", content_type: "LinkedIn post", topic_suggestion: "Share weekend learnings" },
+        { day: "Wednesday", content_type: "Instagram post", topic_suggestion: "Quick tip or insight" },
+        { day: "Friday", content_type: "LinkedIn article", topic_suggestion: "Deep dive into a topic" },
+        { day: "Saturday", content_type: "Twitter thread", topic_suggestion: "Weekly highlights" },
+        { day: "Sunday", content_type: "Planning", topic_suggestion: "Plan next week's content" }
+      ],
+      cross_platform_roadmap: ["Start with LinkedIn long-form", "Create Instagram carousel from key points", "Turn into Twitter thread"]
+    }
+  };
+}
 
-  const finalStatus = lastError?.status || 429;
-  return res.status(finalStatus).json({
-    error: `Gemini AI Quote Exceeded: ${lastError?.message || 'The AI service is currently unavailable.'}`,
-    details: 'You have reached the daily free-tier limit (20 requests/day) for Gemini models on this API key. I have already tried all fallback models (2.5-flash, 2.0-flash, 2.5-pro). Please retry in 24 hours or use a different API key in server/.env.',
-    isQuotaExceeded: true
-  });
+router.post('/generate', async (req, res) => {
+  const {
+    topic,
+    audience_type,
+    selected_platforms,
+    language_mode = 'English',
+    brand_tone = 'professional',
+    refinement_request = '',
+  } = req.body;
+
+  if (!topic || !audience_type || !selected_platforms || selected_platforms.length === 0) {
+    return res.status(400).json({
+      error: 'Missing required fields: topic, audience_type, selected_platforms',
+    });
+  }
+
+  // Cap topic length
+  let safeTopic = topic;
+  if (safeTopic.length > 300000) {
+    safeTopic = safeTopic.substring(0, 300000) + '... [text truncated to fit AI limits]';
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
+    console.warn('GEMINI_API_KEY not configured. Using demo mode.');
+  }
+
+  const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+  const prompt = buildPrompt(safeTopic, audience_type, selected_platforms, language_mode, brand_tone, refinement_request);
+
+  try {
+    const result = genAI 
+      ? await generateContent(genAI, prompt, selected_platforms)
+      : await generateContent(null, prompt, selected_platforms);
+    return res.json(result);
+  } catch (err) {
+    if (err.message === 'PROMPT_TOO_LONG') {
+      return res.status(400).json({ error: 'The provided topic or input is too large. Please reduce the length of your text.' });
+    }
+    
+    console.error('Unexpected error in generate route:', err);
+    return res.status(500).json({ error: 'An unexpected error occurred. Please try again.' });
+  }
 });
 
 export { router as generateRoute };

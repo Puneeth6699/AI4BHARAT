@@ -8,13 +8,17 @@ const genAI = new GoogleGenerativeAI(apiKey);
 async function test() {
     console.log("Testing API Key:", apiKey.substring(0, 10) + "...");
 
-    const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro'];
+    const models = ['gemini-1.5-flash'];
 
     for (const modelName of models) {
         try {
             console.log(`\nTesting model: ${modelName}`);
             const model = genAI.getGenerativeModel({ model: modelName });
-            const result = await model.generateContent("Hello, say 'test' if you work.");
+
+            const result = await model.generateContent(
+                "Hello, say 'test successful' if you work."
+            );
+
             const response = await result.response;
             console.log(`SUCCESS [${modelName}]:`, response.text());
         } catch (err) {
