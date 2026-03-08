@@ -8,7 +8,7 @@ const genAI = new GoogleGenerativeAI(apiKey);
 async function test() {
     console.log("Testing API Key:", apiKey.substring(0, 10) + "...");
 
-    const models = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+    const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro'];
 
     for (const modelName of models) {
         try {

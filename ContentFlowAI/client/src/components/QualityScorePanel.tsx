@@ -35,6 +35,7 @@ export default function QualityScorePanel({ score, platform: _platform, color }:
         score.overall >= 80 ? '#4ade80' : score.overall >= 60 ? '#fbbf24' : '#f87171';
 
     const chartData = [{ value: score.overall, fill: overallColor }];
+    const improvementList: string[] = score.improvement_actions || [];
 
     return (
         <div className="glass" style={{ padding: '24px 28px' }}>
@@ -43,7 +44,7 @@ export default function QualityScorePanel({ score, platform: _platform, color }:
                     fontSize: 11, fontWeight: 700, color: '#475569',
                     textTransform: 'uppercase', letterSpacing: '0.07em',
                 }}>
-                    Quality Score
+                    🏆 Quality Score (Global)
                 </span>
                 <span className="badge badge-green" style={{ marginLeft: 'auto', fontSize: 12 }}>
                     Overall: {score.overall}
@@ -99,13 +100,13 @@ export default function QualityScorePanel({ score, platform: _platform, color }:
             </div>
 
             {/* Improvements */}
-            {score.improvements && score.improvements.length > 0 && (
+            {improvementList.length > 0 && (
                 <div style={{ marginTop: 16 }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Suggested Improvements
+                        Improvement Actions
                     </span>
                     <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {score.improvements.map((imp, i) => (
+                        {improvementList.map((imp, i) => (
                             <div key={i} style={{
                                 display: 'flex', alignItems: 'flex-start', gap: 8,
                                 padding: '8px 12px',

@@ -23,6 +23,9 @@ export default function GeneratorPage({ onBack }: Props) {
         topic: string;
         audience_type: string;
         selected_platforms: string[];
+        language_mode: 'English' | 'Hindi' | 'Hinglish';
+        brand_tone: string;
+        refinement_request: string;
     } | null>(null);
 
     const stepLabels: { key: Step; label: string }[] = [
@@ -37,6 +40,9 @@ export default function GeneratorPage({ onBack }: Props) {
         topic: string;
         audience_type: string;
         selected_platforms: string[];
+        language_mode: 'English' | 'Hindi' | 'Hinglish';
+        brand_tone: string;
+        refinement_request: string;
     }) => {
         setFormData(data);
         setLoading(true);
@@ -93,9 +99,7 @@ export default function GeneratorPage({ onBack }: Props) {
                     {stepLabels.map((s, i) => (
                         <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <div
-                                    className={`step-dot ${i < currentStepIndex ? 'done' : i === currentStepIndex ? 'active' : ''}`}
-                                />
+                                <div className={`step-dot ${i < currentStepIndex ? 'done' : i === currentStepIndex ? 'active' : ''}`} />
                                 <span style={{
                                     fontSize: 12, fontWeight: 500,
                                     color: i === currentStepIndex ? '#a5b4fc' : i < currentStepIndex ? '#4ade80' : '#475569',

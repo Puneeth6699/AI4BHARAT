@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, ArrowRight, ArrowLeft, Lightbulb, BookOpen, Target } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ArrowLeft, Lightbulb, BookOpen, Target, Zap, BarChart2 } from 'lucide-react';
 import type { Idea, SelectedIdeaOutline } from '../types';
 
 interface Props {
@@ -10,8 +10,19 @@ interface Props {
     onBack: () => void;
 }
 
+const pillarColors: Record<string, string> = {
+    educational: '#22d3ee',
+    motivational: '#f59e0b',
+    storytelling: '#ec4899',
+    'authority-building': '#6366f1',
+};
+
 export default function IdeaSelectionStep({ ideas, outline, onContinue, onBack }: Props) {
-    const [selectedId, setSelectedId] = useState<string>(ideas[0]?.id || '');
+    const [selectedId, setSelectedId] = useState<string>(outline.selected_idea_id || ideas[0]?.id || '');
+
+    const pillarColor = pillarColors[outline.estimated_content_pillar] || '#6366f1';
+    const hookScore = outline.hook_strength_score || 0;
+    const hookColor = hookScore >= 80 ? '#4ade80' : hookScore >= 60 ? '#fbbf24' : '#f87171';
 
     return (
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
@@ -44,17 +55,9 @@ export default function IdeaSelectionStep({ ideas, outline, onContinue, onBack }
                             transition={{ delay: i * 0.1 }}
                             onClick={() => setSelectedId(idea.id)}
                             style={{
-                                padding: '24px 28px',
-                                borderRadius: 16,
-                                border: isSelected
-                                    ? '1.5px solid rgba(99,102,241,0.5)'
-                                    : '1.5px solid rgba(255,255,255,0.07)',
-                                background: isSelected
-                                    ? 'rgba(99,102,241,0.08)'
-                                    : 'rgba(255,255,255,0.03)',
-                                cursor: 'pointer',
-                                transition: 'all 0.25s',
-                                position: 'relative',
+                                padding: '24px 28px', borderRadius: 16, cursor: 'pointer', transition: 'all 0.25s',
+                                border: isSelected ? '1.5px solid rgba(99,102,241,0.5)' : '1.5px solid rgba(255,255,255,0.07)',
+                                background: isSelected ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.03)',
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
@@ -71,15 +74,31 @@ export default function IdeaSelectionStep({ ideas, outline, onContinue, onBack }
                                         <h3 style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', margin: 0 }}>
                                             {idea.title}
                                         </h3>
+                                        {idea.id === outline.selected_idea_id && (
+                                            <span style={{
+                                                fontSize: 10, padding: '2px 8px', borderRadius: 999,
+                                                background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', fontWeight: 700,
+                                            }}>AI Pick</span>
+                                        )}
                                     </div>
-                                    <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6, marginBottom: 10 }}>
+                                    <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6, marginBottom: 12 }}>
                                         {idea.brief_description}
                                     </p>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <Target size={12} color="#6366f1" />
-                                        <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 500 }}>
-                                            {idea.key_angle}
-                                        </span>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <Target size={12} color="#6366f1" />
+                                            <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 500 }}>
+                                                {idea.key_angle}
+                                            </span>
+                                        </div>
+                                        {idea.target_emotional_trigger && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <Zap size={12} color="#f59e0b" />
+                                                <span style={{ fontSize: 12, color: '#f59e0b', fontWeight: 500 }}>
+                                                    {idea.target_emotional_trigger}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 {isSelected && (
@@ -99,21 +118,40 @@ export default function IdeaSelectionStep({ ideas, outline, onContinue, onBack }
                 transition={{ delay: 0.35 }}
                 style={{ padding: '28px 32px', marginBottom: 36 }}
             >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
                     <BookOpen size={18} color="#22d3ee" />
                     <h3 style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', margin: 0 }}>
                         AI-Selected Outline
                     </h3>
-                    <span className="badge badge-cyan" style={{ marginLeft: 'auto', fontSize: 11 }}>
-                        AI Pick
-                    </span>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {outline.estimated_content_pillar && (
+                            <span style={{
+                                fontSize: 11, padding: '3px 10px', borderRadius: 999, fontWeight: 700,
+                                background: `${pillarColor}20`, color: pillarColor, border: `1px solid ${pillarColor}40`,
+                                textTransform: 'capitalize',
+                            }}>
+                                📌 {outline.estimated_content_pillar}
+                            </span>
+                        )}
+                        <span className="badge badge-cyan" style={{ fontSize: 11 }}>AI Pick</span>
+                    </div>
                 </div>
 
-                {/* Hook */}
+                {/* Hook + Hook Strength Score */}
                 <div style={{ marginBottom: 18 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Hook
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Hook
+                        </span>
+                        {outline.hook_strength_score !== undefined && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <BarChart2 size={12} color={hookColor} />
+                                <span style={{ fontSize: 12, fontWeight: 700, color: hookColor }}>
+                                    Strength: {hookScore}/100
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     <p style={{
                         marginTop: 6, color: '#e2e8f0', fontSize: 15, lineHeight: 1.6,
                         padding: '10px 16px', borderLeft: '3px solid #6366f1',
@@ -132,15 +170,13 @@ export default function IdeaSelectionStep({ ideas, outline, onContinue, onBack }
                         {outline.main_points.map((point, i) => (
                             <div key={i} style={{
                                 display: 'flex', alignItems: 'flex-start', gap: 10,
-                                padding: '8px 0',
-                                borderBottom: i < outline.main_points.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                                padding: '8px 0', borderBottom: i < outline.main_points.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
                             }}>
                                 <span style={{
                                     minWidth: 22, height: 22, borderRadius: 6,
                                     background: 'rgba(99,102,241,0.15)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: 11, fontWeight: 700, color: '#818cf8',
-                                    marginTop: 1,
+                                    fontSize: 11, fontWeight: 700, color: '#818cf8', marginTop: 1,
                                 }}>
                                     {i + 1}
                                 </span>
@@ -171,7 +207,7 @@ export default function IdeaSelectionStep({ ideas, outline, onContinue, onBack }
                     <ArrowLeft size={16} /> Back
                 </button>
                 <button className="btn-primary" onClick={onContinue} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    View Platform Content <ArrowRight size={18} />
+                    View Content Package <ArrowRight size={18} />
                 </button>
             </div>
         </div>

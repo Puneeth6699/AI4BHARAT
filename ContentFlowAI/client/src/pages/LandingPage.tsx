@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import {
     Sparkles, Zap, Target, BarChart3, ArrowRight,
-    Linkedin, Instagram, FileText, Stars
+    Linkedin, Instagram, Youtube, Stars
 } from 'lucide-react';
 
 interface Props {
@@ -18,7 +18,7 @@ const features = [
     {
         icon: Target,
         title: 'Platform Optimization',
-        desc: 'Content crafted specifically for LinkedIn, Instagram, and Blog formats.',
+        desc: 'Content crafted specifically for LinkedIn, Instagram, and YouTube formats.',
         color: '#8b5cf6',
     },
     {
@@ -38,7 +38,7 @@ const features = [
 const platforms = [
     { icon: Linkedin, label: 'LinkedIn', color: '#0077b5' },
     { icon: Instagram, label: 'Instagram', color: '#e1306c' },
-    { icon: FileText, label: 'Blog', color: '#22d3ee' },
+    { icon: Youtube, label: 'YouTube', color: '#ff0000' },
 ];
 
 const audiences = [
